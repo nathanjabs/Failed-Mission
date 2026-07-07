@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Crash Site Survival</title>
+  <style>
+    :root {
+      --bg: #07131d;
+      --panel: #132533;
+      --panel-alt: #1d3547;
+      --accent: #44d7b6;
+      --danger: #ff6b6b;
+      --warning: #f5b942;
+      --text: #fdf5e6;
+      --muted: #95a9b4;
+      --border: rgba(255,255,255,0.1);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      background: linear-gradient(135deg, #07131d 0%, #0f2232 100%);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .app {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: rgba(10, 19, 28, 0.9);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+    }
+
+    header {
+      padding: 24px 28px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(90deg, rgba(68, 215, 182, 0.2), rgba(245, 185, 66, 0.18));
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 1.8rem;
+      letter-spacing: 0.04em;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 20px;
+      padding: 20px;
+    }
+
+    .arena, .sidebar > div {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 18px;
+    }
+
+    .arena {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .arena h2 {
+      margin: 0;
+      font-size: 1.2rem;
+    }
+
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .bar-card {
+      background: var(--panel-alt);
+      border-radius: 12px;
+      padding: 12px;
+    }
+
+    .bar-card .topline {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+      font-size: 0.95rem;
+      color: var(--muted);
+    }
+
+    .bar {
+      width: 100%;
+      height: 10px;
+      background: rgba(255,255,255,0.12);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 6px;
+    }
+
+    .bar > div {
+      height: 100%;
+      width: 0;
+      border-radius: inherit;
+      transition: width 0.25s ease;
+      background: linear-gradient(90deg, var(--accent), #7ff2da);
+    }
+
+    .bar.danger > div { background: linear-gradient(90deg, var(--danger), #ff9b83); }
+    .bar.warning > div { background: linear-gradient(90deg, var(--warning), #ffd56b); }
+
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    button {
+      border: none;
+      border-radius: 12px;
+      padding: 12px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #04131b;
+      background: linear-gradient(90deg, var(--accent), #9df3de);
+      cursor: pointer;
+      transition: transform 0.12s ease;
+    }
+
+    button:hover { transform: translateY(-1px); }
+
+    button.secondary {
+      background: linear-gradient(90deg, #f5b942, #ffd56b);
+    }
+
+    button.urgent {
+      background: linear-gradient(90deg, var(--danger), #ff9b83);
+      color: white;
+    }
+
+    .event-log {
+      background: rgba(255,255,255,0.04);
+      border-radius: 14px;
+      padding: 12px 14px;
+      min-height: 120px;
+      line-height: 1.6;
+      color: #e7f3f7;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .artwork-card img {
+      width: 100%;
+      display: block;
+      aspect-ratio: 4 / 3;
+      object-fit: cover;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: #0f2232;
+    }
+
+    .inventory-list {
+      list-style: none;
+      padding: 0;
+      margin: 10px 0 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .inventory-list li {
+      background: rgba(255,255,255,0.08);
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 0.9rem;
+    }
+
+    .muted { color: var(--muted); }
+
+    @media (max-width: 850px) {
+      .layout { grid-template-columns: 1fr; }
+      .controls { grid-template-columns: 1fr; }
+      .status-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Crash Site Survival</h1>
+      <p class="subtitle">Your squad survived the plane wreck. Gather food, craft weapons, and defend your team against zombies and bandits before the night gets worse.</p>
+    </header>
+
+    <main class="layout">
+      <section class="arena">
+        <h2>Mission Arena</h2>
+
+        <div class="status-grid">
+          <div class="bar-card">
+            <div class="topline"><span>Health</span><strong id="healthValue">82</strong></div>
+            <div class="bar"><div id="healthBar"></div></div>
+          </div>
+          <div class="bar-card">
+            <div class="topline"><span>Morale</span><strong id="moraleValue">72</strong></div>
+            <div class="bar"><div id="moraleBar"></div></div>
+          </div>
+          <div class="bar-card">
+            <div class="topline"><span>Supplies</span><strong id="suppliesValue">24</strong></div>
+            <div class="bar"><div id="suppliesBar"></div></div>
+          </div>
+          <div class="bar-card">
+            <div class="topline"><span>Food</span><strong id="foodValue">12</strong></div>
+            <div class="bar"><div id="foodBar"></div></div>
+          </div>
+          <div class="bar-card">
+            <div class="topline"><span>Ammo</span><strong id="ammoValue">0</strong></div>
+            <div class="bar warning"><div id="ammoBar"></div></div>
+          </div>
+          <div class="bar-card">
+            <div class="topline"><span>Threat</span><strong id="threatValue">38</strong></div>
+            <div class="bar danger"><div id="threatBar"></div></div>
+          </div>
+        </div>
+
+        <div class="controls">
+          <button data-action="scavengeFood">Scavenge Food</button>
+          <button data-action="searchSupplies" class="secondary">Search Supplies</button>
+          <button data-action="craftSpear">Craft Spear</button>
+          <button data-action="craftCrossbow" class="secondary">Craft Crossbow</button>
+          <button data-action="defendTeam" class="urgent">Defend Team</button>
+          <button data-action="rest">Rest & Recover</button>
+        </div>
+
+        <div id="eventLog" class="event-log">The plane has crashed in a ruined field. Your squad needs food, tools, and a plan before the dead arrive.</div>
+      </section>
+
+      <aside class="sidebar">
+        <div class="artwork-card">
+          <img id="sceneImage" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600' viewBox='0 0 800 600'%3E%3Crect width='800' height='600' fill='%2307131d'/%3E%3Crect x='70' y='120' width='260' height='180' rx='18' fill='%234d4d4d'/%3E%3Crect x='110' y='100' width='180' height='70' rx='12' fill='%236b6b6b'/%3E%3Cpath d='M140 260 L190 250 L230 290 L200 360 L160 330 Z' fill='%236b4f32'/%3E%3Ccircle cx='620' cy='220' r='110' fill='%231f3b4d'/%3E%3Cpath d='M530 220 C560 160 690 160 720 220 C690 280 560 280 530 220 Z' fill='%233d6a82'/%3E%3Cpath d='M300 420 L430 360 L540 420 L470 500 L360 500 Z' fill='%2329494b'/%3E%3Cpath d='M360 440 L400 390 L470 440 L430 500 L380 500 Z' fill='%235c6b4e'/%3E%3Ccircle cx='360' cy='170' r='10' fill='%23f2d8a0'/%3E%3Ccircle cx='400' cy='180' r='10' fill='%23f2d8a0'/%3E%3Cpath d='M340 210 C370 250 390 250 420 210' stroke='%23f2d8a0' stroke-width='8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E" alt="Survival scene" />
+        </div>
+
+        <div>
+          <h3>Team Inventory</h3>
+          <ul id="inventoryList" class="inventory-list"></ul>
+        </div>
+
+        <div>
+          <h3>Team Status</h3>
+          <p id="teamStatus" class="muted">4 survivors are active. Morale is holding but the threats are rising.</p>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <script>
+    const TheCodingQuad = [];
+    const state = {
+      health: 82,
+      morale: 72,
+      supplies: 24,
+      food: 12,
+      ammo: 0,
+      threat: 38,
+      team: 4,
+      weapon: 'None',
+      turns: 0
+    };
+
+    const elements = {
+      healthValue: document.getElementById('healthValue'),
+      moraleValue: document.getElementById('moraleValue'),
+      suppliesValue: document.getElementById('suppliesValue'),
+      foodValue: document.getElementById('foodValue'),
+      ammoValue: document.getElementById('ammoValue'),
+      threatValue: document.getElementById('threatValue'),
+      healthBar: document.getElementById('healthBar'),
+      moraleBar: document.getElementById('moraleBar'),
+      suppliesBar: document.getElementById('suppliesBar'),
+      foodBar: document.getElementById('foodBar'),
+      ammoBar: document.getElementById('ammoBar'),
+      threatBar: document.getElementById('threatBar'),
+      inventoryList: document.getElementById('inventoryList'),
+      teamStatus: document.getElementById('teamStatus'),
+      eventLog: document.getElementById('eventLog')
+    };
+
+    function clamp(value, min, max) {
+      return Math.min(max, Math.max(min, value));
+    }
+
+    function updateStatusBars() {
+      const bars = [
+        { value: state.health, element: elements.healthBar, label: elements.healthValue },
+        { value: state.morale, element: elements.moraleBar, label: elements.moraleValue },
+        { value: state.supplies, element: elements.suppliesBar, label: elements.suppliesValue },
+        { value: state.food, element: elements.foodBar, label: elements.foodValue },
+        { value: state.ammo, element: elements.ammoBar, label: elements.ammoValue },
+        { value: state.threat, element: elements.threatBar, label: elements.threatValue }
+      ];
+
+      bars.forEach(({ value, element, label }) => {
+        const normalized = clamp(value, 0, 100);
+        element.style.width = `${normalized}%`;
+        if (label) label.textContent = `${normalized}`;
+      });
+
+      elements.teamStatus.textContent = `${state.team} survivors are active. Weapon: ${state.weapon}. Threat level is ${state.threat}.`;
+    }
+
+    function renderInventory() {
+      elements.inventoryList.innerHTML = '';
+      if (TheCodingQuad.length === 0) {
+        const empty = document.createElement('li');
+        empty.textContent = 'No gear yet';
+        elements.inventoryList.appendChild(empty);
+        return;
+      }
+
+      TheCodingQuad.forEach(item => {
+        const li = document.createElement('li');
+        li.textContent = item;
+        elements.inventoryList.appendChild(li);
+      });
+    }
+
+    function addInventory(item) {
+      TheCodingQuad.push(item);
+      renderInventory();
+    }
+
+    function consumeItems(items) {
+      const missing = items.filter(item => !TheCodingQuad.includes(item));
+      if (missing.length) {
+        setMessage(`You need ${missing.join(', ')} before crafting that.`);
+        return false;
+      }
+
+      items.forEach(item => {
+        const index = TheCodingQuad.indexOf(item);
+        if (index >= 0) TheCodingQuad.splice(index, 1);
+      });
+
+      return true;
+    }
+
+    function setMessage(text) {
+      elements.eventLog.innerHTML = `<strong>Mission Update:</strong> ${text}`;
+    }
+
+    function applyThreat(delta) {
+      state.threat = clamp(state.threat + delta, 0, 100);
+      updateStatusBars();
+    }
+
+    function scavengeFood() {
+      state.food = clamp(state.food + 10, 0, 100);
+      state.supplies = clamp(state.supplies + 4, 0, 100);
+      state.morale = clamp(state.morale + 3, 0, 100);
+      state.health = clamp(state.health + 1, 0, 100);
+      state.turns += 1;
+      addInventory('Canned Rations');
+      addInventory('Water Flask');
+      setMessage('The team found ration packs and water near the wreck. Survival is improving.');
+      applyThreat(4);
+    }
+
+    function searchSupplies() {
+      state.supplies = clamp(state.supplies + 12, 0, 100);
+      state.morale = clamp(state.morale + 2, 0, 100);
+      state.turns += 1;
+      addInventory('Wood Planks');
+      addInventory('Metal Scrap');
+      setMessage('A supply crate surfaced under the debris. The squad secured tools and scrap.');
+      applyThreat(3);
+    }
+
+    function craftSpear() {
+      if (state.supplies < 8) {
+        setMessage('You need more supplies to build a spear.');
+        return;
+      }
+      if (!consumeItems(['Wood Planks', 'Metal Scrap'])) return;
+      state.supplies = clamp(state.supplies - 8, 0, 100);
+      state.morale = clamp(state.morale + 6, 0, 100);
+      state.weapon = 'Spear';
+      state.turns += 1;
+      addInventory('Spear');
+      setMessage('The team forged a spear for close defense. It is ready for the next ambush.');
+      updateStatusBars();
+    }
+
+    function craftCrossbow() {
+      if (state.supplies < 14) {
+        setMessage('You need more supplies to build a crossbow.');
+        return;
+      }
+      if (!consumeItems(['Wood Planks', 'Wire Coil', 'Metal Scrap'])) return;
+      state.supplies = clamp(state.supplies - 14, 0, 100);
+      state.ammo = clamp(state.ammo + 8, 0, 100);
+      state.morale = clamp(state.morale + 8, 0, 100);
+      state.weapon = 'Crossbow';
+      state.turns += 1;
+      addInventory('Crossbow');
+      setMessage('A crossbow is ready. Your team now has a ranged weapon and bolts.');
+      updateStatusBars();
+    }
+
+    function defendTeam() {
+      if (state.weapon === 'None') {
+        setMessage('Craft a weapon first or the team will be overrun.');
+        return;
+      }
+      state.health = clamp(state.health - 3, 0, 100);
+      state.morale = clamp(state.morale + 5, 0, 100);
+      state.threat = clamp(state.threat - 18, 0, 100);
+      state.ammo = clamp(state.ammo - 2, 0, 100);
+      state.turns += 1;
+      setMessage('The squad held the line against zombies and bandits. The perimeter is safer now.');
+      updateStatusBars();
+    }
+
+    function rest() {
+      state.health = clamp(state.health + 10, 0, 100);
+      state.morale = clamp(state.morale + 6, 0, 100);
+      state.threat = clamp(state.threat - 6, 0, 100);
+      state.turns += 1;
+      setMessage('The survivors rest and recover strength before the next sweep.');
+      updateStatusBars();
+    }
+
+    document.querySelectorAll('[data-action]').forEach(button => {
+      button.addEventListener('click', () => {
+        const action = button.getAttribute('data-action');
+        if (action === 'scavengeFood') scavengeFood();
+        if (action === 'searchSupplies') searchSupplies();
+        if (action === 'craftSpear') craftSpear();
+        if (action === 'craftCrossbow') craftCrossbow();
+        if (action === 'defendTeam') defendTeam();
+        if (action === 'rest') rest();
+      });
+    });
+
+    renderInventory();
+    updateStatusBars();
+  </script>
+</body>
+</html>

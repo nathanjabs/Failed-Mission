@@ -626,6 +626,8 @@
     function renderUpgrades() {
       elements.upgradeList.innerHTML = '';
       upgradeCatalog.forEach((upgrade) => {
+        const rebirthCostMultiplier = 1 + state.rebirths * 0.35;
+        const scaledCost = Math.round(upgrade.cost * rebirthCostMultiplier);
         const row = document.createElement('div');
         row.className = 'upgrade';
         row.innerHTML = `
@@ -633,7 +635,7 @@
             <strong>${upgrade.name}</strong><br />
             <span class="muted">${upgrade.desc}</span>
           </div>
-          <button data-upgrade="${upgrade.key}">Buy ${upgrade.cost}</button>
+          <button data-upgrade="${upgrade.key}">Buy ${scaledCost}</button>
         `;
         row.querySelector('button').addEventListener('click', () => buyUpgrade(upgrade.key));
         elements.upgradeList.appendChild(row);
@@ -643,13 +645,15 @@
     function buyUpgrade(type) {
       const upgrade = upgradeCatalog.find(item => item.key === type);
       if (!upgrade) return;
-      if (state.points < upgrade.cost) {
+      const rebirthCostMultiplier = 1 + state.rebirths * 0.35;
+      const scaledCost = Math.round(upgrade.cost * rebirthCostMultiplier);
+      if (state.points < scaledCost) {
         state.message = 'Not enough points for that upgrade yet.';
         updateUI();
         return;
       }
 
-      state.points -= upgrade.cost;
+      state.points -= scaledCost;
       if (upgrade.click) state.perClick += upgrade.click;
       if (upgrade.auto) state.autoRate += upgrade.auto;
       state.message = `Upgrade bought! ${upgrade.click ? 'Your clicks are stronger now.' : 'Your dog is generating more points automatically.'}`;

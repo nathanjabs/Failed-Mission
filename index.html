@@ -550,7 +550,13 @@
       autoRate: 0,
       rebirths: 0,
       rebirthMultiplier: 1,
-      message: 'Every click makes your dog happier and earns you points.'
+      message: 'Every click makes your dog happier and earns you points.',
+      elapsedSeconds: 0,
+      milestoneRewards: [
+        { time: 300, amount: 100, granted: false },
+        { time: 600, amount: 250, granted: false },
+        { time: 900, amount: 500, granted: false }
+      ]
     };
 
     const elements = {
@@ -607,6 +613,14 @@
       const effectivePerClick = state.perClick * state.rebirthMultiplier;
       const effectiveAutoRate = state.autoRate * state.rebirthMultiplier;
       const requirement = getRebirthRequirement();
+
+      state.milestoneRewards.forEach((reward) => {
+        if (!reward.granted && state.elapsedSeconds >= reward.time) {
+          state.points += reward.amount * state.rebirthMultiplier;
+          reward.granted = true;
+          state.message = `Time reward unlocked! You earned ${reward.amount * state.rebirthMultiplier} bonus points.`;
+        }
+      });
 
       elements.pointsStat.textContent = `Points: ${Math.floor(state.points)}`;
       elements.perClickStat.textContent = `Per click: ${effectivePerClick}`;
@@ -686,6 +700,7 @@
     elements.rebirthButton.addEventListener('click', rebirth);
 
     setInterval(() => {
+      state.elapsedSeconds += 0.1;
       state.points += (state.autoRate * state.rebirthMultiplier) / 40;
       updateUI();
     }, 100);

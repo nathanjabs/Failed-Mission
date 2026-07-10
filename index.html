@@ -967,20 +967,20 @@
       state.lastClickTime = now;
       state.totalClicks += 1;
 
-      const comboLevel = Math.min(4, Math.floor((state.combo - 1) / 5));
+      const comboLevel = Math.min(4, Math.floor((state.combo - 1) / 10));
       let comboMultiplier = 1;
       if (comboLevel === 1) {
-        comboMultiplier = 1.25;
+        comboMultiplier = 1.1;
       } else if (comboLevel === 2) {
-        comboMultiplier = 1.5;
+        comboMultiplier = 1.2;
       } else if (comboLevel === 3) {
-        comboMultiplier = 2;
+        comboMultiplier = 1.35;
       } else if (comboLevel >= 4) {
-        comboMultiplier = 2.5;
+        comboMultiplier = 1.5;
       }
       const baseReward = state.perClick * comboMultiplier;
-      const luckyBurst = Math.random() < 0.08;
-      const rewardAmount = luckyBurst ? baseReward * 2 : baseReward;
+      const luckyBurst = Math.random() < 0.015;
+      const rewardAmount = luckyBurst ? baseReward * 1.5 : baseReward;
       const rewardPoints = Math.round(rewardAmount * state.rebirthMultiplier);
 
       state.points += rewardAmount * state.rebirthMultiplier;

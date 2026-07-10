@@ -249,6 +249,10 @@
       box-shadow: 0 10px 24px rgba(0,0,0,0.25);
     }
 
+    .dog-button.pulse .dog-face {
+      animation: dogPop 0.2s ease;
+    }
+
     .dog-face {
       width: 280px;
       height: 250px;
@@ -279,6 +283,12 @@
     }
 
     .dog-face:active { transform: scale(0.96); }
+
+    @keyframes dogPop {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.04); }
+      100% { transform: scale(1); }
+    }
 
     .dog-eye {
       position: absolute;
@@ -445,6 +455,41 @@
       min-height: 60px;
     }
 
+    .bonus-bone {
+      position: absolute;
+      width: 54px;
+      height: 34px;
+      background: linear-gradient(135deg, #ffe9b6 0%, #d8a35a 45%, #8f5f25 100%);
+      border-radius: 40% 60% 55% 45% / 45% 40% 60% 55%;
+      border: 3px solid #7a4318;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.24);
+      cursor: pointer;
+      z-index: 4;
+      transform: rotate(-8deg);
+      transition: transform 0.15s ease;
+      user-select: none;
+    }
+
+    .bonus-bone::before {
+      content: "";
+      position: absolute;
+      left: 8px;
+      top: 6px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.45);
+    }
+
+    .bonus-bone:hover {
+      transform: rotate(-8deg) scale(1.08);
+    }
+
+    .bonus-bone.popped {
+      transform: scale(0.8) rotate(12deg);
+      opacity: 0;
+    }
+
     .art-layer {
       position: absolute;
       inset: 0;
@@ -575,6 +620,7 @@
           <div class="stat" id="pointsStat">Points: 0</div>
           <div class="stat" id="perClickStat">Per click: 1</div>
           <div class="stat" id="autoStat">Auto gain: 0/s</div>
+          <div class="stat" id="comboStat">Combo: x1</div>
         </div>
 
         <div class="rebirth-panel">
@@ -584,6 +630,8 @@
           <button id="resetButton" class="reset-button">Reset Game</button>
           <button id="codeButton" class="code-button">Enter Code</button>
         </div>
+
+        <div id="bonusBoneLayer" style="position: absolute; inset: 0; pointer-events: none; z-index: 3;"></div>
 
         <button id="dogButton" class="dog-button">
           <div class="dog-face">
@@ -640,6 +688,11 @@
         rebirthMultiplier: 1,
         message: 'Every click makes your dog happier and earns you points.',
         elapsedSeconds: 0,
+        combo: 1,
+        lastClickTime: 0,
+        totalClicks: 0,
+        bonusBoneActive: false,
+        bonusBoneTimer: null,
         redeemedCodes: new Set(),
         milestoneRewards: [
           { time: 300, amount: 100, granted: false },
@@ -655,6 +708,7 @@
       pointsStat: document.getElementById('pointsStat'),
       perClickStat: document.getElementById('perClickStat'),
       autoStat: document.getElementById('autoStat'),
+      comboStat: document.getElementById('comboStat'),
       rebirthsStat: document.getElementById('rebirthsStat'),
       multiplierStat: document.getElementById('multiplierStat'),
       messageBox: document.getElementById('messageBox'),
@@ -665,7 +719,8 @@
       resetModal: document.getElementById('resetModal'),
       confirmResetButton: document.getElementById('confirmResetButton'),
       cancelResetButton: document.getElementById('cancelResetButton'),
-      upgradeList: document.getElementById('upgradeList')
+      upgradeList: document.getElementById('upgradeList'),
+      bonusBoneLayer: document.getElementById('bonusBoneLayer')
     };
 
     const upgradeNames = [
@@ -722,6 +777,7 @@
       elements.pointsStat.textContent = `Points: ${Math.floor(state.points)}`;
       elements.perClickStat.textContent = `Per click: ${effectivePerClick}`;
       elements.autoStat.textContent = `Auto gain: ${effectiveAutoRate}/s`;
+      elements.comboStat.textContent = `Combo: x${(1 + Math.min(4, Math.floor((state.combo - 1) / 5)) * 0.25).toFixed(2)}`;
       elements.rebirthsStat.textContent = `Rebirths: ${state.rebirths}`;
       elements.multiplierStat.textContent = `Multiplier: x${state.rebirthMultiplier}`;
       elements.messageBox.textContent = state.message;
@@ -732,6 +788,65 @@
     function addPoints(amount) {
       state.points += amount * state.rebirthMultiplier;
       updateUI();
+    }
+
+    function spawnBonusBone() {
+      if (state.bonusBoneActive) return;
+
+      const bone = document.createElement('button');
+      bone.className = 'bonus-bone';
+      bone.type = 'button';
+      bone.setAttribute('aria-label', 'Bonus bone');
+
+      const panel = elements.bonusBoneLayer.parentElement;
+      const panelWidth = panel ? panel.clientWidth : 320;
+      const panelHeight = panel ? panel.clientHeight : 320;
+      const startX = Math.random() < 0.5 ? -80 : panelWidth + 80;
+      const startY = 60 + Math.random() * Math.max(80, panelHeight - 120);
+      const endX = Math.random() < 0.5 ? panelWidth + 80 : -80;
+      const duration = 1800 + Math.random() * 1200;
+
+      bone.style.left = `${startX}px`;
+      bone.style.top = `${startY}px`;
+      bone.style.pointerEvents = 'auto';
+      elements.bonusBoneLayer.appendChild(bone);
+
+      const onCatch = () => {
+        if (!state.bonusBoneActive) return;
+        clearTimeout(state.bonusBoneTimer);
+        bone.classList.add('popped');
+        state.bonusBoneActive = false;
+        state.points += 400 * state.rebirthMultiplier;
+        state.message = 'Bonus bone collected! You earned 400 points!';
+        updateUI();
+        window.setTimeout(() => bone.remove(), 140);
+      };
+
+      bone.addEventListener('click', onCatch);
+      state.bonusBoneActive = true;
+      state.bonusBoneTimer = window.setTimeout(() => {
+        if (!state.bonusBoneActive) return;
+        state.bonusBoneActive = false;
+        bone.remove();
+      }, duration);
+
+      requestAnimationFrame(() => {
+        bone.animate([
+          { transform: 'translate(0, 0) rotate(-8deg)' },
+          { transform: `translate(${endX - startX}px, 0) rotate(8deg)` }
+        ], {
+          duration,
+          easing: 'linear',
+          fill: 'forwards'
+        });
+      });
+
+      window.setTimeout(() => {
+        if (state.bonusBoneActive) {
+          bone.remove();
+          state.bonusBoneActive = false;
+        }
+      }, duration + 50);
     }
 
     function renderUpgrades() {
@@ -820,7 +935,7 @@
       const rewards = {
         'i love dogs': { points: 1500, message: 'You found a dog-loving code and earned 1500 points!' },
         'doggy': { points: 3000, message: 'You found the Doggy code and earned 3000 points!' },
-        'pneumonoultromicroscopicsilicovolcanoconiosis': { points: 10000, message: 'Secret code activated! You earned 10000 points!' }
+        'pneumonoultramicroscopicsilicovolcanoconiosis': { points: 10000, message: 'Secret code activated! You earned 10000 points!' }
       };
 
       if (state.redeemedCodes.has(normalizedCode)) {
@@ -843,8 +958,47 @@
     }
 
     elements.dogButton.addEventListener('click', () => {
-      addPoints(state.perClick);
-      state.message = `You clicked the dog and earned ${state.perClick} point${state.perClick === 1 ? '' : 's'}!`;
+      const now = Date.now();
+      if (state.lastClickTime && now - state.lastClickTime < 2200) {
+        state.combo += 1;
+      } else {
+        state.combo = 1;
+      }
+      state.lastClickTime = now;
+      state.totalClicks += 1;
+
+      const comboMultiplier = 1 + Math.min(4, Math.floor((state.combo - 1) / 5)) * 0.25;
+      const baseReward = state.perClick * comboMultiplier;
+      const luckyBurst = Math.random() < 0.16;
+      const rewardAmount = luckyBurst ? baseReward * 2 : baseReward;
+      const rewardPoints = Math.round(rewardAmount * state.rebirthMultiplier);
+
+      state.points += rewardAmount * state.rebirthMultiplier;
+
+      if (state.totalClicks % 25 === 0) {
+        state.points += 50 * state.rebirthMultiplier;
+      }
+
+      if (state.combo % 5 === 0) {
+        state.points += state.perClick * 2 * state.rebirthMultiplier;
+      }
+
+      let message = `Combo x${comboMultiplier.toFixed(2)}! You earned ${rewardPoints} point${rewardPoints === 1 ? '' : 's'}!`;
+      if (luckyBurst) {
+        message = `Lucky Bark! Double reward! You earned ${rewardPoints} point${rewardPoints === 1 ? '' : 's'}!`;
+      }
+      if (state.totalClicks % 25 === 0) {
+        message += ' 25-click bonus unlocked!';
+      }
+      if (state.combo % 5 === 0) {
+        message += ' Combo bonus earned!';
+      }
+
+      state.message = message;
+      elements.dogButton.classList.remove('pulse');
+      void elements.dogButton.offsetWidth;
+      elements.dogButton.classList.add('pulse');
+      window.setTimeout(() => elements.dogButton.classList.remove('pulse'), 180);
       updateUI();
     });
 
@@ -859,6 +1013,12 @@
       state.points += (state.autoRate * state.rebirthMultiplier) / 40;
       updateUI();
     }, 100);
+
+    window.setInterval(() => {
+      if (Math.random() < 0.35) {
+        spawnBonusBone();
+      }
+    }, 1800);
 
     renderUpgrades();
     updateUI();
